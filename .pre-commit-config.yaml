@@ -1,0 +1,115 @@
+default_stages: [pre-commit, pre-push]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: "migrations"
+      - id: trailing-whitespace
+        exclude: "migrations"
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.0
+    hooks:
+      - id: isort
+        exclude: "migrations"
+        args: ["--profile", "black"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.7
+    hooks:
+      - id: ruff
+        args: [
+          "--line-length", "79",
+          "--no-fix",
+          "--select", "ALL",
+          "--extend-ignore",
+          "E902,D100,D101,D102,D103,D104,D105,D106,D107,S106,S104,FAST002,ANN201,PTH123,FA102,FA100,COM812,I001,Q000,UP006,RUF022,EXE002,UP035,FBT003,FBT001,ANN204,FIX002,TD003,TD002,B008",
+        ]
+        exclude: "migrations"
+        files: "^(main\\.py
+        |core/dependencies\\.py
+        |utils/histories_pre_processing\\.py
+        |utils/histories_pre_processing\\.py
+        |utils/inventory_process\\.py
+        |utils/inventory_process\\.py
+        |models/utils\\.py
+        |schema/discovery_point\\.py
+        |models/coreinspect/coreinspect_models\\.py
+        |models/shared_models/shared_models\\.py
+        |models/coreinspect/asset_inventory\\.py
+        |models/mixin\\.py
+        |api/notifications/notifications\\.py
+        |api/asset_details\\.py
+        |api/zone\\.py
+        |api/os_name\\.py
+        |api/web_crawler\\.py
+        |api/web_application\\.py
+        |api/vrf\\.py
+        |api/vlan\\.py
+        |api/asset\\.py
+        |api/logic/business_service\\.py
+        |api/business_service\\.py
+        |api/change\\.py
+        |api/os_family\\.py
+        |api/logic/assets/asset_relationships\\.py
+        |api/logic/objects/web_crawler\\.py
+        |api/logic/objects/connection\\.py
+        |api/logic/objects/credential\\.py
+        |api/logic/networks/zone\\.py
+        |api/logic/networks/vlan\\.py
+        |api/logic/networks/vrf\\.py
+        |api/logic/assets/os_name\\.py
+        |api/logic/inventory_landing\\.py
+        |api/logic/discovery_workflow/asset_discovery/discovery_flow\\.py
+        |api/logic/discovery_workflow/logic_asset_inventory\\.py
+        |api/logic/discovery_workflow/workflow\\.py
+        |api/logic/assets/canvas\\.py
+        |api/logic/discovery_workflow/asset_discovery/discovery_crud\\.py
+        |api/logic/objects/location\\.py)$"
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.2
+    hooks:
+      - id: bandit
+        args: [ "--severity", "high", "--recursive" ]
+        exclude: "migrations"
+        files: "^(main\\.py
+        |core/dependencies\\.py
+        |utils/histories_pre_processing\\.py
+        |utils/histories_pre_processing\\.py
+        |utils/inventory_process\\.py
+        |utils/inventory_process\\.py
+        |models/utils\\.py
+        |schema/discovery_point\\.py
+        |models/coreinspect/coreinspect_models\\.py
+        |models/shared_models/shared_models\\.py
+        |models/coreinspect/asset_inventory\\.py
+        |models/mixin\\.py
+        |api/notifications/notifications\\.py
+        |api/asset_details\\.py
+        |api/zone\\.py
+        |api/os_name\\.py
+        |api/web_crawler\\.py
+        |api/web_application\\.py
+        |api/vrf\\.py
+        |api/vlan\\.py
+        |api/asset\\.py
+        |api/logic/business_service\\.py
+        |api/business_service\\.py
+        |api/change\\.py
+        |api/os_family\\.py
+        |api/logic/assets/asset_relationships\\.py
+        |api/logic/objects/web_crawler\\.py
+        |api/logic/objects/connection\\.py
+        |api/logic/objects/credential\\.py
+        |api/logic/networks/zone\\.py
+        |api/logic/networks/vlan\\.py
+        |api/logic/networks/vrf\\.py
+        |api/logic/assets/os_name\\.py
+        |api/logic/inventory_landing\\.py
+        |api/logic/discovery_workflow/asset_discovery/discovery_flow\\.py
+        |api/logic/discovery_workflow/logic_asset_inventory\\.py
+        |api/logic/discovery_workflow/workflow\\.py
+        |api/logic/assets/canvas\\.py
+        |api/logic/discovery_workflow/asset_discovery/discovery_crud\\.py
+        |api/logic/objects/location\\.py$)"
