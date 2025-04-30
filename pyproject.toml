@@ -14,7 +14,7 @@ uvicorn = {extras = ["standard"], version = "^0.34.1"}
 sqlalchemy = "^2.0.28"
 asyncpg = "0.30.0"  # PostgreSQL (async)
 alembic = "1.15.2"
-pydantic = {extras = ["email"], version = "^2.11.3"}
+pydantic = {extras = ["email"], version = "^2.11.4"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 httpx = "^0.28.1"
