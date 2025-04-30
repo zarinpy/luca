@@ -4,15 +4,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-# Pydantic schemas
-class FieldDefinition(BaseModel):
-    field: str
-    type: str
-    required: bool = False
-    interface: Optional[dict]
-    options: Optional[dict]
-
-
 class CollectionOut(BaseModel):
     """Output schema for a collection.
     """

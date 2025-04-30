@@ -1,12 +1,14 @@
-import uuid
 from contextvars import ContextVar
 
 import sqlalchemy
-from sqlalchemy import Column, text
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, declarative_base
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
 from setting import setting
+
 db_session_var: ContextVar[AsyncSession | None] = ContextVar("db_session", default=None)
 
 
@@ -44,7 +46,7 @@ async def session() -> AsyncSession:
     async with async_session() as s:
         try:
             yield s
-        except Exception as e:
+        except Exception:
             # Handle exceptions (e.g., rollback)
             await s.rollback()
             raise

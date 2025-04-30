@@ -1,6 +1,8 @@
 # Base declarative class for all models
+
 import datetime
 import uuid
+from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -11,6 +13,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -30,9 +33,178 @@ class Base(DeclarativeBase):
     )
 
 
+# Main User table
+class User(Base):
+    """
+    Represents a user in the CMS, supporting multiple authentication methods.
+
+    Stores core user data, credentials for username/password login, and metadata.
+    Indexes on email and username optimize login and lookup operations.
+    """
+
+    __tablename__ = "mitre_users"
+
+    # Core user fields
+    email: Mapped[str] = mapped_column(
+        String(254),    # RFC 5321
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="Unique email address for login and notifications",
+    )
+    username: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=True,
+        index=True,
+        comment="Optional unique username for login",
+    )
+    hashed_password: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Hashed password for username/password login (null for OAuth-only users)",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        comment="Whether the user account is active",
+    )
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether the user has admin privileges",
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.datetime.utcnow,
+        comment="Account creation timestamp",
+    )
+    last_login: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="Timestamp of last successful login",
+    )
+
+    __table_args__ = (
+        Index("idx_mitre_users_email", "email"),
+        Index("idx_mitre_users_username", "username"),
+    )
+
+
+# OAuth Identity table for external providers
+class OAuthIdentity(Base):
+    """
+    Stores OAuth2 identities linked to a user.
+
+    Supports multiple OAuth providers (e.g., Google, GitHub).
+    Indexes on provider and provider_user_id optimize lookups during login.
+    """
+
+    __tablename__ = "mitre_oauth_identities"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("mitre_users.id"),
+        nullable=False,
+        index=True,
+        comment="FK to the associated user",
+    )
+    provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="OAuth provider (e.g., google, github)",
+    )
+    provider_user_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Unique user ID from the OAuth provider",
+    )
+    access_token: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="OAuth access token (if stored)",
+    )
+    refresh_token: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="OAuth refresh token (if stored)",
+    )
+    token_expiry: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="Expiry timestamp for access token",
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.datetime.utcnow,
+        comment="Identity creation timestamp",
+    )
+
+    __table_args__ = (
+        Index(
+            "idx_mitre_oauth_identities_provider_user_id",
+            "provider",
+            "provider_user_id",
+        ),
+    )
+
+
+# Refresh Token table for JWT authentication
+class RefreshToken(Base):
+    """
+    Stores refresh tokens for JWT-based authentication.
+
+    Supports token rotation and revocation.
+    Indexes on token optimize validation and revocation checks.
+    """
+
+    __tablename__ = "mitre_refresh_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("mitre_users.id"),
+        nullable=False,
+        index=True,
+        comment="FK to the associated user",
+    )
+    token: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Refresh token string",
+    )
+    expires_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        comment="Token expiry timestamp",
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.datetime.utcnow,
+        comment="Token creation timestamp",
+    )
+    is_revoked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether the token is revoked",
+    )
+
+    __table_args__ = (
+        Index("idx_mitre_refresh_tokens_token", "token"),
+    )
+
+
 # 1. mitre_collections
 class Collection(Base):
-    """Stores metadata about each collection (table) in the system.
+    """
+    Stores metadata about each collection (table) in the system.
 
     Indexed on 'hidden' for fast filtering of visible vs. hidden collections.
     """
@@ -79,7 +251,8 @@ class Collection(Base):
 
 # 2. mitre_fields
 class Field(Base):
-    """Defines fields/columns for each collection.
+    """
+    Defines fields/columns for each collection.
 
     Composite index on (collection, field)
     speeds lookups for specific field definitions.
@@ -98,6 +271,7 @@ class Field(Base):
         String,
         nullable=False,
         index=True,
+        unique=True,
         comment="Field/column name in the collection",
     )
     type: Mapped[str] = mapped_column(
@@ -130,9 +304,11 @@ class Field(Base):
     )
 
 
+
 # 3. mitre_relations
 class Relation(Base):
-    """Captures relations between two collections (one-to-many, many-to-many).
+    """
+    Captures relations between two collections (one-to-many, many-to-many).
 
     Indexes on FK columns optimize joins and relation lookups.
     Composite index on (many_collection, one_collection)
@@ -188,7 +364,8 @@ class Relation(Base):
 
 # Revisions / Drafts support
 class Revision(Base):
-    """Supports draft and versioning of collection records.
+    """
+    Supports draft and versioning of collection records.
 
     Useful for content moderation workflows and undo/history.
     """
@@ -234,7 +411,8 @@ class Revision(Base):
 
 # Navigation menu system
 class Navigation(Base):
-    """Defines navigational structure (menus, links).
+    """
+    Defines navigational structure (menus, links).
 
     Useful for building UI menus dynamically.
     """

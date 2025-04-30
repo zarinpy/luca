@@ -6,7 +6,6 @@ role_router = APIRouter(prefix="/roles", tags=["Roles"])
 @role_router.get("/", status_code=status.HTTP_200_OK)
 async def list_roles(request: Request):
     """List all roles"""
-    pass
 
 
 @role_router.post("/", status_code=status.HTTP_201_CREATED)
