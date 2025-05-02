@@ -1,51 +1,53 @@
 from typing import Any, Dict, Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
+from marshmallow import Schema, fields
+from models.orm_models.core import Collection
 
 
-class CollectionOut(BaseModel):
+class CollectionSchema(Schema):
     """Output schema for a collection.
     """
 
-    id: UUID
-    collection: str
-    hidden: bool
-    singleton: bool
+    id = fields.UUID()
+    collection = fields.Str()
+    hidden = fields.Bool()
+    singleton = fields.Bool()
+
+    class Meta:
+        model = Collection
 
 
-class CollectionCreate(BaseModel):
-    """Input schema for creating or updating a collection.
+class CreateCollection(BaseModel):
     """
-
+    Pydantic model for the mitre_collections table, representing metadata about each collection.
+    """
     collection: str = Field(
-        description=(
-            "Unique collection name/key using "
-            "lowercase letters, numbers, and underscores"
-        ),
+        ...,
+        alias="name",
+        description="Unique collection name/key",
+        min_length=1,
     )
     hidden: bool = Field(
-        False,
-        description="Whether the collection is hidden in the UI",
+        default=False,
+        description="Whether hidden in the UI",
     )
     singleton: bool = Field(
-        False,
-        description="True if only one record allowed in this collection",
+        default=False,
+        description="True if only one record allowed",
+    )
+    icon: Optional[Dict[str, Any]] = Field(
+        default={},
+        description="UI icon metadata",
+    )
+    note: Optional[Dict[str, Any]] = Field(
+        default={},
+        description="Arbitrary notes/metadata",
+    )
+    translations: Optional[Dict[str, Any]] = Field(
+        default={},
+        description="Multilanguage labels",
     )
 
-
-# Pydantic Models for Records
-class RecordOut(BaseModel):
-    """Output schema for a record within a collection.
-    """
-
-    id: UUID
-    data: Dict[str, Any]
-
-
-class RecordCreate(BaseModel):
-    """Input schema for creating or updating a record.
-    Accepts arbitrary JSON matching collection's fields.
-    """
-
-    data: Dict[str, Any]
+    class Config:
+        extra = "forbid"

@@ -1,7 +1,14 @@
+from typing import Any, Dict, List
+
+from fastapi import HTTPException
+from sqlalchemy import CursorResult, Result, select, update
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from marshmallow import Schema
-from typing import Type, Any
+
+__all__ = ["CRUD"]
+
+from starlette import status
+
 
 class QueryResult:
     """Wrapper class to allow optional serialization of a single instance"""
@@ -55,97 +62,106 @@ class QueryResultList:
         return f"{self.obj_list}"
 
 
-class DBService:
-    def __init__(self, model: Type, session: AsyncSession, schema: Type[Schema]):
-        self.model = model
-        self.session = session
-        self.schema = schema()
-        self.query = select(model)
-        self._executed = False
+class CRUD:
 
-    def _ensure_not_executed(self):
-        """Prevent further chaining after execution"""
-        if self._executed:
-            raise RuntimeError((
-                "Cannot chain further after executing "
-                "`all()`, `first()`, or `serialize()`."
-            ))
+    @classmethod
+    async def get_or_create(
+            cls,
+            session: AsyncSession,
+            keys: Dict[str, Any],
+            defaults: Dict[str, Any],
+    ):
+        obj = await cls.get(session, keys)
 
-    def where(self, *conditions):
-        """Apply WHERE conditions using SQLAlchemy expressions"""
-        self._ensure_not_executed()
-        self.query = self.query.where(*conditions)
-        return self
+        if obj is None:
+            obj = await cls.create(session, data=defaults)
 
-    def join(self, related_model, condition=None, is_outer=False):
-        """Perform INNER JOIN or LEFT JOIN"""
-        self._ensure_not_executed()
-        if is_outer:
-            self.query = self.query.outerjoin(related_model, condition)
-        else:
-            self.query = self.query.join(related_model, condition)
-        return self
+        return obj
 
-    def order_by(self, *args):
-        """Order results by specified columns"""
-        self._ensure_not_executed()
-        self.query = self.query.order_by(*args)
-        return self
+    # TODO need latest record
+    @classmethod
+    async def get(
+            cls,
+            session: AsyncSession,
+            keys: Dict[str, Any],
+            raise_exception: bool = False
+    ):
+        result = (
+            await session.execute(
+                select(cls).filter_by(**keys))
+        ).unique().scalars().all()
 
-    def limit(self, count: int):
-        """Limit the number of results"""
-        self._ensure_not_executed()
-        self.query = self.query.limit(count)
-        return self
+        if len(result) > 1:
+            raise MultipleResultsFound(
+                f"multiple results found for: {keys}"
+            )
+        if not result:
+            if raise_exception:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Item not found",
+                )
+            return None
 
-    async def execute(self) -> QueryResultList:
-        """Execute the query and return all model instances as a list"""
-        self._executed = True
-        result = await self.session.execute(self.query)
-        obj_list = result.scalars().all()
-        return QueryResultList(obj_list, self.schema)  # ✅ Returns a list wrapper
+        return result[0]
 
-    async def create(self, data: dict, commit: bool) -> QueryResult | None:
-        """Create a new record, return the instance, and allow optional serialization"""
-        obj = self.model(**data)
-        self.session.add(obj)
-        if commit:
-            await self.session.commit()
-            await self.session.refresh(obj)
-            return QueryResult(obj, self.schema)
+    @classmethod
+    async def create(
+            cls,
+            session: AsyncSession,
+            data: Dict[str, Any],
+    ) -> Any:
+        """create a single entity with given data"""
+        obj = cls(**data)
+        session.add(obj)
+        await session.commit()
+        await session.refresh(obj)
+        return obj
 
-    async def update(self, obj: Any, data: dict, commit: bool) -> QueryResult | None:
-        """Update an object instance, refresh it, and allow optional serialization"""
-        if not isinstance(obj, self.model):
-            raise ValueError("update() requires an instance of the model.")
+    async def delete(self, session: AsyncSession):
+        await session.delete(self)
+        await session.commit()
 
-        for key, value in data.items():
-            setattr(obj, key, value)
-        if commit:
-            await self.session.commit()
-            await self.session.refresh(obj)
-            return QueryResult(obj, self.schema)
+    async def update(self, session: AsyncSession, data: Dict):
+        await session.execute(
+            update(self.__class__)
+            .where(self.__class__.id == self.id)
+            .values(**data)
+        )
+        await session.commit()
 
-    async def delete(self, obj: Any, commit: bool):
-        """Delete an object instance"""
-        if not isinstance(obj, self.model):
-            raise ValueError("delete() requires an instance of the model.")
+    @classmethod
+    async def update_or_create(
+            cls,
+            session: AsyncSession,
+            defaults: Dict[str, Any],
+            create_defaults: Dict[str, Any],
+            **kwargs
+    ) -> Result[Any] | CursorResult[Any]:
+        raise NotImplementedError
 
-        if commit:
-            await self.session.delete(obj)
-            await self.session.commit()
+    @classmethod
+    async def bulk_create(
+            cls,
+            session: AsyncSession,
+            data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """bulk insert to db"""
+        raise NotImplementedError
 
+    @classmethod
+    async def bulk_update(cls, session: AsyncSession,
+                          filters: Dict[str, Any],
+                          data: List[Dict[str, Any]]) -> int:
+        """bulk update into db return affected rows"""
+        raise NotImplementedError
 
-async def user_list():
-    async with (get_session() as session):
-        try:
-            user_service = DBService(User, session, UserSchema)
-            result = (await user_service.where(
-                [User.name.like("%omid")]
-            )).serialize()
-        except Exception as e:
-            await session.rollback()
-            raise e
-        finally:
-            await session.close()
-
+    @classmethod
+    async def bulk_delete(
+            cls,
+            session: AsyncSession,
+            filters: Dict[str, Any],
+            data: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """delete multiple entities from db"""
+        raise NotImplementedError

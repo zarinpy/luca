@@ -17,8 +17,24 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from models.orm_models.crud import CRUD
 
-class Base(DeclarativeBase):
+__all__ = [
+    "User",
+    "RefreshToken",
+    "Relation",
+    "Revision",
+    "Taxonomy",
+    "Translation",
+    "Collection",
+    "Content",
+    "OAuthIdentity",
+    "Navigation",
+    "Field",
+]
+
+
+class Base(DeclarativeBase, CRUD):
     """Root base class using SQLAlchemy 2.0 DeclarativeBase.
 
     All models inherit from this to share metadata and conventions.
@@ -304,7 +320,6 @@ class Field(Base):
     )
 
 
-
 # 3. mitre_relations
 class Relation(Base):
     """
@@ -322,14 +337,14 @@ class Relation(Base):
         ForeignKey("mitre_collections.collection"),
         nullable=False,
         index=True,
-        comment="Collection on the 'many' side",
+        comment="CreateCollection on the 'many' side",
     )
     one_collection: Mapped[str] = mapped_column(
         String,
         ForeignKey("mitre_collections.collection"),
         nullable=False,
         index=True,
-        comment="Collection on the 'one' side",
+        comment="CreateCollection on the 'one' side",
     )
     field_many: Mapped[str] = mapped_column(
         String,
@@ -377,7 +392,7 @@ class Revision(Base):
         ForeignKey("mitre_collections.collection"),
         nullable=False,
         index=True,
-        comment="Collection the revision belongs to",
+        comment="CreateCollection the revision belongs to",
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -467,3 +482,70 @@ class Translation(Base):
     field: Mapped[str] = mapped_column(String, nullable=False)
     language: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class Content(Base):
+    """
+    Stores content records for collections in the CMS.
+
+    Each record is tied to a collection and user, with flexible JSON data.
+    Supports draft/published status and versioning via revisions.
+    Indexes on collection, status, and created_by optimize common queries.
+    """
+
+    __tablename__ = "mitre_content"
+
+    collection: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("mitre_collections.collection"),
+        nullable=False,
+        index=True,
+        comment="FK to the collection this content belongs to",
+    )
+    data: Mapped[JSON] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="JSON data for the content record",
+    )
+    status: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        default="draft",
+        index=True,
+        comment="Content status: draft, published, archived",
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("mitre_users.id"),
+        nullable=False,
+        index=True,
+        comment="FK to the user who created the content",
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.datetime.utcnow,
+        comment="Content creation timestamp",
+    )
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="Content last update timestamp",
+    )
+    published_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="Content publication timestamp",
+    )
+    is_draft: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        index=True,
+        comment="Whether the content is a draft",
+    )
+
+    __table_args__ = (
+        Index("idx_mitre_content_collection_status", "collection", "status"),
+        Index("idx_mitre_content_created_by", "created_by"),
+    )

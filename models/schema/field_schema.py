@@ -1,10 +1,12 @@
+import uuid
 from typing import Optional, List, Literal, Union
 from marshmallow import Schema, fields
 from pydantic import BaseModel, Field
 from models.orm_models.core import Field as FieldModel
 
 
-__all__ = ["MitreField", "FieldSchema"]
+__all__ = ["CreateField", "FieldSchema"]
+
 
 class SchemaDefinition(BaseModel):
     type: Literal[
@@ -47,6 +49,7 @@ class SchemaDefinition(BaseModel):
         None,
         description="Schema definition for items in array fields"
     )
+
     class Config:
         extra = "forbid"
 
@@ -92,6 +95,7 @@ class InterfaceSettings(BaseModel):
         None,
         description="Icon associated with the field"
     )
+
     class Config:
         extra = "forbid"
 
@@ -126,8 +130,8 @@ class AdditionalOptions(BaseModel):
         extra = "forbid"
 
 
-class MitreField(BaseModel):
-    collection: str = Field(..., description="Collection this field belongs to")
+class CreateField(BaseModel):
+    collection: uuid.UUID = Field(..., description="CreateCollection this field belongs to")
     field: str = Field(..., description="Name of the field")
     type: str = Field(..., description="Data type of the field")
     schema: Optional[SchemaDefinition] = Field(
@@ -139,10 +143,11 @@ class MitreField(BaseModel):
     options: Optional[AdditionalOptions] = Field(
         None, description="Additional options for the field"
     )
+
     class Config:
         extra = "forbid"
         json_schema_extra = {
-          "collection": "user_profiles",
+          "collection_id": uuid.uuid4(),
           "field": "username",
           "type": "string",
           "schema": {
