@@ -2,7 +2,7 @@
 
 import datetime
 import uuid
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from sqlalchemy import (
     JSON,
@@ -22,17 +22,21 @@ from models.orm_models.crud import CRUD
 __all__ = [
     "User",
     "RefreshToken",
+    "OAuthIdentity",
+    "DeviceGroup",
+    "DeviceType",
+    "Device",
+    "DeviceEvent",
+    "SyncLog",
+    "Collection",
+    "Field",
     "Relation",
     "Revision",
+    "Navigation",
     "Taxonomy",
     "Translation",
-    "Collection",
     "Content",
-    "OAuthIdentity",
-    "Navigation",
-    "Field",
 ]
-
 
 class Base(DeclarativeBase, CRUD):
     """Root base class using SQLAlchemy 2.0 DeclarativeBase.
@@ -40,7 +44,6 @@ class Base(DeclarativeBase, CRUD):
     All models inherit from this to share metadata and conventions.
     Provides a common 'id' primary key column (UUID) for all tables.
     """
-
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -48,504 +51,284 @@ class Base(DeclarativeBase, CRUD):
         comment="Universal primary key UUID",
     )
 
-
 # Main User table
 class User(Base):
-    """
-    Represents a user in the CMS, supporting multiple authentication methods.
-
-    Stores core user data, credentials for username/password login, and metadata.
-    Indexes on email and username optimize login and lookup operations.
-    """
-
     __tablename__ = "mitre_users"
-
-    # Core user fields
     email: Mapped[str] = mapped_column(
-        String(254),    # RFC 5321
-        unique=True,
-        nullable=False,
-        index=True,
+        String(254), unique=True, nullable=False, index=True,
         comment="Unique email address for login and notifications",
     )
     username: Mapped[Optional[str]] = mapped_column(
-        String(50),
-        unique=True,
-        nullable=True,
-        index=True,
+        String(50), unique=True, nullable=True, index=True,
         comment="Optional unique username for login",
     )
     hashed_password: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True,
+        Text, nullable=True,
         comment="Hashed password for username/password login (null for OAuth-only users)",
     )
     is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=True,
+        Boolean, nullable=False, default=True,
         comment="Whether the user account is active",
     )
     is_superuser: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
+        Boolean, nullable=False, default=False,
         comment="Whether the user has admin privileges",
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=datetime.datetime.utcnow,
+        DateTime, nullable=False, default=datetime.datetime.now,
         comment="Account creation timestamp",
     )
     last_login: Mapped[Optional[datetime.datetime]] = mapped_column(
-        DateTime,
-        nullable=True,
+        DateTime, nullable=True,
         comment="Timestamp of last successful login",
     )
-
     __table_args__ = (
         Index("idx_mitre_users_email", "email"),
         Index("idx_mitre_users_username", "username"),
     )
 
-
 # OAuth Identity table for external providers
 class OAuthIdentity(Base):
-    """
-    Stores OAuth2 identities linked to a user.
-
-    Supports multiple OAuth providers (e.g., Google, GitHub).
-    Indexes on provider and provider_user_id optimize lookups during login.
-    """
-
     __tablename__ = "mitre_oauth_identities"
-
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_users.id"),
-        nullable=False,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("mitre_users.id"), nullable=False, index=True,
         comment="FK to the associated user",
     )
     provider: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
+        String(50), nullable=False,
         comment="OAuth provider (e.g., google, github)",
     )
     provider_user_id: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
+        String(255), nullable=False,
         comment="Unique user ID from the OAuth provider",
     )
     access_token: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True,
-        comment="OAuth access token (if stored)",
+        Text, nullable=True, comment="OAuth access token (if stored)",
     )
     refresh_token: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True,
-        comment="OAuth refresh token (if stored)",
+        Text, nullable=True, comment="OAuth refresh token (if stored)",
     )
     token_expiry: Mapped[Optional[datetime.datetime]] = mapped_column(
-        DateTime,
-        nullable=True,
-        comment="Expiry timestamp for access token",
+        DateTime, nullable=True, comment="Expiry timestamp for access token",
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=datetime.datetime.utcnow,
+        DateTime, nullable=False, default=datetime.datetime.now,
         comment="Identity creation timestamp",
     )
-
     __table_args__ = (
         Index(
             "idx_mitre_oauth_identities_provider_user_id",
-            "provider",
-            "provider_user_id",
+            "provider", "provider_user_id",
         ),
     )
 
-
 # Refresh Token table for JWT authentication
 class RefreshToken(Base):
-    """
-    Stores refresh tokens for JWT-based authentication.
-
-    Supports token rotation and revocation.
-    Indexes on token optimize validation and revocation checks.
-    """
-
     __tablename__ = "mitre_refresh_tokens"
-
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_users.id"),
-        nullable=False,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("mitre_users.id"), nullable=False, index=True,
         comment="FK to the associated user",
     )
     token: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-        unique=True,
-        index=True,
+        Text, nullable=False, unique=True, index=True,
         comment="Refresh token string",
     )
     expires_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        comment="Token expiry timestamp",
+        DateTime, nullable=False, comment="Token expiry timestamp",
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=datetime.datetime.utcnow,
+        DateTime, nullable=False, default=datetime.datetime.now,
         comment="Token creation timestamp",
     )
     is_revoked: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
+        Boolean, nullable=False, default=False,
         comment="Whether the token is revoked",
     )
-
     __table_args__ = (
         Index("idx_mitre_refresh_tokens_token", "token"),
     )
 
-
-# 1. mitre_collections
-class Collection(Base):
-    """
-    Stores metadata about each collection (table) in the system.
-
-    Indexed on 'hidden' for fast filtering of visible vs. hidden collections.
-    """
-
-    __tablename__ = "mitre_collections"
-    collection: Mapped[str] = mapped_column(
-        String,
-        unique=True,
-        nullable=False,
-        comment="Unique collection name/key",
+# Device Management Tables
+class DeviceGroup(Base):
+    __tablename__ = "mitre_device_groups"
+    name: Mapped[str] = mapped_column(
+        String, unique=True, nullable=False, comment="Logical group of devices",
     )
-    hidden: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-        comment="Whether hidden in the UI",
-    )
-    singleton: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-        comment="True if only one record allowed",
-    )
-    icon: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="UI icon metadata",
-    )
-    note: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Arbitrary notes/metadata",
-    )
-    translations: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Multilanguage labels",
+    description: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True, comment="Description of the device group",
     )
 
-    __table_args__ = (
-        Index("idx_mitre_collections_hidden", "hidden"),
+class DeviceType(Base):
+    __tablename__ = "mitre_device_types"
+    name: Mapped[str] = mapped_column(
+        String, unique=True, nullable=False, comment="Type identifier for devices",
+    )
+    description: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True, comment="Description of device type capabilities",
+    )
+    schema: Mapped[Optional[JSON]] = mapped_column(
+        JSON, nullable=True, comment="Optional telemetry data schema",
     )
 
-
-# 2. mitre_fields
-class Field(Base):
-    """
-    Defines fields/columns for each collection.
-
-    Composite index on (collection, field)
-    speeds lookups for specific field definitions.
-    Indexes on collection, field, and type support common filters.
-    """
-
-    __tablename__ = "mitre_fields"
-    collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-        index=True,
-        comment="FK to collection this field belongs to",
+class Device(Base):
+    __tablename__ = "mitre_devices"
+    name: Mapped[str] = mapped_column(
+        String, nullable=False, index=True, comment="Human-readable device name",
     )
-    field: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        index=True,
-        unique=True,
-        comment="Field/column name in the collection",
+    device_type: Mapped[str] = mapped_column(
+        String, ForeignKey("mitre_device_types.name"), nullable=False, index=True,
+        comment="Type of this device",
     )
-    type: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        index=True,
-        comment="Data type (string, integer, etc.)",
-    )
-    schema: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Raw column definition JSON",
-    )
-    interface: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="UI interface settings",
-    )
-    options: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Additional UI options",
-    )
-
-    __table_args__ = (
-        Index(
-            "idx_mitre_fields_collection_field",
-            "collection", "field",
-        ),
-    )
-
-
-# 3. mitre_relations
-class Relation(Base):
-    """
-    Captures relations between two collections (one-to-many, many-to-many).
-
-    Indexes on FK columns optimize joins and relation lookups.
-    Composite index on (many_collection, one_collection)
-     aids discovery of relation pairs.
-    """
-
-    __tablename__ = "mitre_relations"
-
-    many_collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-        index=True,
-        comment="CreateCollection on the 'many' side",
-    )
-    one_collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-        index=True,
-        comment="CreateCollection on the 'one' side",
-    )
-    field_many: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_fields.field"),
-        nullable=False,
-        index=True,
-        comment="Field in many_collection",
-    )
-    field_one: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_fields.field"),
-        nullable=False,
-        index=True,
-        comment="Field in one_collection",
-    )
-    type: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        comment="Relation type: m2o, o2m, m2m",
-    )
-    junction: Mapped[str] = mapped_column(
-        String,
-        nullable=True,
-        comment="Junction table for m2m relations",
-    )
-
-    __table_args__ = (
-        Index("idx_mitre_relations_many_one", "many_collection",
-              "one_collection"),
-    )
-
-
-# Revisions / Drafts support
-class Revision(Base):
-    """
-    Supports draft and versioning of collection records.
-
-    Useful for content moderation workflows and undo/history.
-    """
-
-    __tablename__ = "mitre_revisions"
-
-    collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-        index=True,
-        comment="CreateCollection the revision belongs to",
-    )
-    item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False,
-        index=True,
-        comment="Original item ID this revision represents",
-    )
-    data: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=False,
-        comment="Snapshot of item data",
+    group: Mapped[Optional[str]] = mapped_column(
+        String, ForeignKey("mitre_device_groups.name"), nullable=True, index=True,
+        comment="Group this device belongs to",
     )
     status: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        default="draft",
-        index=True,
-        comment="Revision status: draft, published, archived",
+        String, nullable=False, default="offline", index=True,
+        comment="Current device status: online/offline/error",
     )
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_users.id"),
-        nullable=False,
+    last_seen: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime, nullable=True, comment="Last heartbeat timestamp",
     )
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=datetime.datetime.now,
+    provisioned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        comment="Whether provisioning is complete",
+    )
+    credentials: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True, comment="Provisioning credentials or cert thumbprints",
+    )
+    properties: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True, comment="Additional device-specific properties",
     )
 
+class DeviceEvent(Base):
+    __tablename__ = "mitre_device_events"
+    device_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mitre_devices.id"), nullable=False, index=True,
+        comment="FK to the device generating the event",
+    )
+    event_type: Mapped[str] = mapped_column(
+        String, nullable=False, comment="Type of event (telemetry, alert, status)",
+    )
+    payload: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, comment="Event data payload",
+    )
+    timestamp: Mapped[datetime.datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.datetime.now,
+        comment="Event generation timestamp",
+    )
+    processed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        comment="Whether the event has been processed by workflows",
+    )
+    __table_args__ = (
+        Index("idx_mitre_device_events_device_id", "device_id"),
+        Index("idx_mitre_device_events_timestamp", "timestamp"),
+    )
 
-# Navigation menu system
+class SyncLog(Base):
+    __tablename__ = "mitre_sync_logs"
+    device_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mitre_devices.id"), nullable=False, index=True,
+        comment="FK to the device performing sync",
+    )
+    collection: Mapped[str] = mapped_column(
+        String, nullable=False, comment="Collection being synced",
+    )
+    last_synced_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.datetime.now,
+        comment="Last successful sync timestamp",
+    )
+    conflict_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0,
+        comment="Number of conflicts detected",
+    )
+    __table_args__ = (
+        Index("idx_mitre_sync_logs_device_id_collection", "device_id", "collection"),
+    )
+
+# Existing content and system tables with enhancements
+class Collection(Base):
+    __tablename__ = "mitre_collections"
+    collection: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    singleton: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    icon: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    note: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    translations: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    __table_args__ = (Index("idx_mitre_collections_hidden", "hidden"),)
+
+class Field(Base):
+    __tablename__ = "mitre_fields"
+    collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False, index=True)
+    field: Mapped[str] = mapped_column(String, nullable=False, index=True, unique=True)
+    type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    schema: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    interface: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    options: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    __table_args__ = (Index("idx_mitre_fields_collection_field", "collection", "field"),)
+
+class Relation(Base):
+    __tablename__ = "mitre_relations"
+    many_collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False, index=True)
+    one_collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False, index=True)
+    field_many: Mapped[str] = mapped_column(ForeignKey("mitre_fields.field"), nullable=False, index=True)
+    field_one: Mapped[str] = mapped_column(ForeignKey("mitre_fields.field"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    junction: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    __table_args__ = (Index("idx_mitre_relations_many_one", "many_collection", "one_collection"),)
+
+class Revision(Base):
+    __tablename__ = "mitre_revisions"
+    collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False, index=True)
+    item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    data: Mapped[JSON] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="draft", index=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("mitre_users.id"), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.now)
+
 class Navigation(Base):
-    """
-    Defines navigational structure (menus, links).
-
-    Useful for building UI menus dynamically.
-    """
-
     __tablename__ = "mitre_navigation"
-
     label: Mapped[str] = mapped_column(String, nullable=False)
     path: Mapped[str] = mapped_column(String, nullable=False)
-    parent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_navigation.id"),
-        nullable=True,
-    )
+    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("mitre_navigation.id"), nullable=True)
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    visible: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=True,
-    )
+    visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
-
-# Taxonomy system
 class Taxonomy(Base):
-    """Defines vocabularies and taxonomy terms."""
-
     __tablename__ = "mitre_taxonomy"
-
     vocabulary: Mapped[str] = mapped_column(String, nullable=False, index=True)
     term: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    parent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_taxonomy.id"),
-        nullable=True,
-    )
+    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("mitre_taxonomy.id"), nullable=True)
 
-
-# Multilingual content translation table
 class Translation(Base):
-    """Stores field-level translations for multilingual support."""
-
     __tablename__ = "mitre_translations"
-
-    collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-    )
-    item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False,
-    )
+    collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     field: Mapped[str] = mapped_column(String, nullable=False)
     language: Mapped[str] = mapped_column(String, nullable=False)
-    value: Mapped[str] = mapped_column(String, nullable=True)
-
+    value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
 class Content(Base):
-    """
-    Stores content records for collections in the CMS.
-
-    Each record is tied to a collection and user, with flexible JSON data.
-    Supports draft/published status and versioning via revisions.
-    Indexes on collection, status, and created_by optimize common queries.
-    """
-
     __tablename__ = "mitre_content"
-
-    collection: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("mitre_collections.collection"),
-        nullable=False,
-        index=True,
-        comment="FK to the collection this content belongs to",
+    collection: Mapped[str] = mapped_column(ForeignKey("mitre_collections.collection"), nullable=False, index=True)
+    data: Mapped[JSON] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="draft", index=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("mitre_users.id"), nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.now)
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, nullable=True)
+    published_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, nullable=True)
+    is_draft: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    last_modified: Mapped[datetime.datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow,
+        comment="Timestamp of last content change"
     )
-    data: Mapped[JSON] = mapped_column(
-        JSON,
-        nullable=False,
-        comment="JSON data for the content record",
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1,
+        comment="Incrementing version for optimistic locking"
     )
-    status: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        default="draft",
-        index=True,
-        comment="Content status: draft, published, archived",
-    )
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("mitre_users.id"),
-        nullable=False,
-        index=True,
-        comment="FK to the user who created the content",
-    )
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=datetime.datetime.utcnow,
-        comment="Content creation timestamp",
-    )
-    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(
-        DateTime,
-        nullable=True,
-        comment="Content last update timestamp",
-    )
-    published_at: Mapped[Optional[datetime.datetime]] = mapped_column(
-        DateTime,
-        nullable=True,
-        comment="Content publication timestamp",
-    )
-    is_draft: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=True,
-        index=True,
-        comment="Whether the content is a draft",
-    )
-
     __table_args__ = (
         Index("idx_mitre_content_collection_status", "collection", "status"),
         Index("idx_mitre_content_created_by", "created_by"),
+        Index("idx_content_collection_status_lastmod", "collection", "status", "last_modified"),
     )
