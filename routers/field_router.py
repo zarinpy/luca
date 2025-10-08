@@ -1,12 +1,11 @@
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from core import CustomResponse, get_response_schema
 from core.dependencies import DBSession
 from models.orm_models.core import Field
 from models.schema.field_schema import CreateField, FieldSchema
-from core import get_response_schema, CustomResponse
 
 # APIRouter with versioning and auth dependency
 fields_router = APIRouter(
@@ -26,11 +25,7 @@ fields_router = APIRouter(
     "/",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_field(
-    request: Request,
-    session: AsyncSession = Depends(DBSession),
-    data: CreateField = Depends(),
-):
+async def create_field(session: DBSession, data: CreateField) -> None :
     """Create a new field"""
     field = await Field.create(
         session=session,
@@ -42,11 +37,10 @@ async def create_field(
 
 @fields_router.get("/")
 async def list_fields(
-    request: Request,
-    session: AsyncSession = Depends(DBSession),
-    page: int = 1,
-    limit: int = 100,
-):
+        session: DBSession,
+        page: int = 1,
+        limit: int = 100,
+) -> None :
     """List all fields with pagination"""
     query = select(Field)
     if limit:
@@ -66,15 +60,11 @@ async def list_fields(
     "/{field_id}",
     status_code=status.HTTP_200_OK,
 )
-async def get_field(
-    request: Request,
-    field_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def get_field(field_id: int, session: DBSession) -> None :
     """Get a single field's info"""
     field = await Field.get(
         session,
-        keys={'id': field_id},
+        keys={"id": field_id},
         raise_exception=True,
     )
     schema = FieldSchema()
@@ -86,15 +76,14 @@ async def get_field(
     status_code=status.HTTP_200_OK,
 )
 async def update_field(
-    request: Request,
-    field_id: int,
-    data: CreateField = Depends(),
-    session: AsyncSession = Depends(DBSession),
-):
+        session: DBSession,
+        field_id: int,
+        data: CreateField,
+) -> None :
     """Update a field"""
     field = await Field.get(
         session,
-        keys={'id': field_id},
+        keys={"id": field_id},
         raise_exception=True,
     )
     field = await field.update(session, data.model_dump())
@@ -109,18 +98,14 @@ async def update_field(
         **get_response_schema(
             200,
             "Field successfully deleted",
-        )
+        ),
     },
 )
-async def delete_field(
-    request: Request,
-    field_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def delete_field(field_id: int, session: DBSession) -> None :
     """Delete a field"""
     field = await Field.get(
         session,
-        keys={'id': field_id},
+        keys={"id": field_id},
         raise_exception=True,
     )
     await field.delete(session)

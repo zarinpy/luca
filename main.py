@@ -1,3 +1,5 @@
+import os
+
 import uvicorn
 from fastapi import FastAPI
 
@@ -11,7 +13,6 @@ app = FastAPI(
     ),
     version="0.0.1",
     docs_url="/docs",
-    redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
 
@@ -20,16 +21,16 @@ app.include_router(routes)
 
 
 def main() -> None:
-    """Run the FastAPI app with Uvicorn."""
+    host = os.getenv("HOST", "0.0.0.0") # noqa: S104
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host=host,
         # Use 8000 for dev; use 80/443 behind a proxy (e.g., nginx) in prod
         port=8000,
         # Auto-reload in dev mode
         reload=True,
         # Number of workers, increase for production (ex: workers=4)
-        workers=1,
+        workers=3,
         # Trust proxy headers (useful when behind nginx)
         proxy_headers=True,
         # Allow forwarded IPs

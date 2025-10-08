@@ -4,5 +4,5 @@ schemas_route = APIRouter(prefix="/schemas", tags=["Schemas"])
 
 
 @schemas_route.get("/", status_code=status.HTTP_200_OK)
-async def get_schemas(request: Request):
+async def get_schemas(request: Request) -> None :
     pass

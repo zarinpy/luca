@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import uuid
-from typing import Optional, List, Literal, Union
+from typing import ClassVar, Literal
+
 from marshmallow import Schema, fields
 from pydantic import BaseModel, Field
-from models.orm_models.core import Field as FieldModel
 
+from models.orm_models.core import Field as FieldModel
 
 __all__ = ["CreateField", "FieldSchema"]
 
@@ -11,43 +14,43 @@ __all__ = ["CreateField", "FieldSchema"]
 class SchemaDefinition(BaseModel):
     type: Literal[
         "string", "integer", "number", "boolean",
-        "array", "object", "date", "datetime"
+        "array", "object", "date", "datetime",
     ] = Field(..., description="Data type of the field")
-    required: Optional[bool] = Field(
-        False,
-        description="Indicates if the field is required"
+    required: bool | None = Field(
+        default=False,
+        description="Indicates if the field is required",
     )
-    default: Optional[Union[str, int, float, bool, list, dict]] = Field(
+    default: str | int | float | bool | list | dict = Field(
         None,
-        description="Default value for the field"
+        description="Default value for the field",
     )
-    enum: Optional[List[Union[str, int]]] = Field(
+    enum: list[str | int] | None = Field(
         None,
-        description="List of allowed values"
+        description="list of allowed values",
     )
-    min_length: Optional[int] = Field(
+    min_length: int | None = Field(
         None,
-        description="Minimum length for string fields"
+        description="Minimum length for string fields",
     )
-    max_length: Optional[int] = Field(
+    max_length: int | None = Field(
         None,
-        description="Maximum length for string fields"
+        description="Maximum length for string fields",
     )
-    minimum: Optional[float] = Field(
+    minimum: float | None = Field(
         None,
-        description="Minimum value for numeric fields"
+        description="Minimum value for numeric fields",
     )
-    maximum: Optional[float] = Field(
+    maximum: float | None = Field(
         None,
-        description="Maximum value for numeric fields"
+        description="Maximum value for numeric fields",
     )
-    pattern: Optional[str] = Field(
+    pattern: str | None = Field(
         None,
-        description="Regex pattern for string fields"
+        description="Regex pattern for string fields",
     )
-    items: Optional["SchemaDefinition"] = Field(
+    items: SchemaDefinition | None = Field(
         None,
-        description="Schema definition for items in array fields"
+        description="Schema definition for items in array fields",
     )
 
     class Config:
@@ -55,45 +58,45 @@ class SchemaDefinition(BaseModel):
 
 
 class InterfaceSettings(BaseModel):
-    widget: Optional[str] = Field(
+    widget: str| None = Field(
         None,
-        description="Type of UI widget (e.g., 'text', 'select', 'checkbox')"
+        description="Type of UI widget (e.g., 'text', 'select', 'checkbox')",
     )
-    label: Optional[str] = Field(
+    label: str| None = Field(
         None,
-        description="Label displayed for the field"
+        description="Label displayed for the field",
     )
-    placeholder: Optional[str] = Field(
+    placeholder: str| None = Field(
         None,
-        description="Placeholder text for the field"
+        description="Placeholder text for the field",
     )
-    help_text: Optional[str] = Field(
+    help_text: str | None = Field(
         None,
-        description="Help text or tooltip for the field"
+        description="Help text or tooltip for the field",
     )
-    readonly: Optional[bool] = Field(
-        False,
-        description="Indicates if the field is read-only"
+    readonly: bool | None = Field(
+        default=False,
+        description="Indicates if the field is read-only",
     )
-    hidden: Optional[bool] = Field(
-        False,
-        description="Indicates if the field is hidden in the UI"
+    hidden: bool | None = Field(
+        default=False,
+        description="Indicates if the field is hidden in the UI",
     )
-    order: Optional[int] = Field(
+    order: int | None = Field(
         None,
-        description="Order of the field in the UI"
+        description="Order of the field in the UI",
     )
-    css_class: Optional[str] = Field(
+    css_class: str | None = Field(
         None,
-        description="CSS class for styling the field"
+        description="CSS class for styling the field",
     )
-    width: Optional[str] = Field(
+    width: str | None = Field(
         None,
-        description="Width of the field in the UI (e.g., '50%')"
+        description="Width of the field in the UI (e.g., '50%')",
     )
-    icon: Optional[str] = Field(
+    icon: str | None = Field(
         None,
-        description="Icon associated with the field"
+        description="Icon associated with the field",
     )
 
     class Config:
@@ -101,29 +104,33 @@ class InterfaceSettings(BaseModel):
 
 
 class AdditionalOptions(BaseModel):
-    searchable: Optional[bool] = Field(
-        False, description="Indicates if the field is searchable"
+    searchable: bool | None = Field(
+        default=False, description="Indicates if the field is searchable",
     )
-    sortable: Optional[bool] = Field(
-        False, description="Indicates if the field is sortable"
+    sortable: bool | None = Field(
+        default=False, description="Indicates if the field is sortable",
     )
-    unique: Optional[bool] = Field(
-        False, description="Indicates if the field value must be unique"
+    unique: bool | None = Field(
+        default=False,
+        description="Indicates if the field value must be unique",
     )
-    index: Optional[bool] = Field(
-        False, description="Indicates if the field should be indexed in the database"
+    index: bool | None = Field(
+        default=False,
+        description="Indicates if the field should be indexed in the database",
     )
-    default_sort: Optional[bool] = Field(
-        False, description="Indicates if the field is used for default sorting"
+    default_sort: bool | None = Field(
+        default=False,
+        description="Indicates if the field is used for default sorting",
     )
-    filterable: Optional[bool] = Field(
-        False, description="Indicates if the field can be used for filtering"
+    filterable: bool | None = Field(
+        default=False,
+        description="Indicates if the field can be used for filtering",
     )
-    group: Optional[str] = Field(
-        None, description="Group name for organizing fields in the UI"
+    group: str | None = Field(
+        None, description="Group name for organizing fields in the UI",
     )
-    dependencies: Optional[List[str]] = Field(
-        None, description="List of field names this field depends on"
+    dependencies: list[str] | None = Field(
+        None, description="list of field names this field depends on",
     )
 
     class Config:
@@ -131,56 +138,63 @@ class AdditionalOptions(BaseModel):
 
 
 class CreateField(BaseModel):
-    collection: uuid.UUID = Field(..., description="CreateCollection this field belongs to")
+    collection: uuid.UUID = Field(
+        ...,
+        description="CreateCollection this field belongs to",
+    )
     field: str = Field(..., description="Name of the field")
     type: str = Field(..., description="Data type of the field")
-    schema: Optional[SchemaDefinition] = Field(
-        None, description="Schema definition for the field"
+    schema: SchemaDefinition | None = Field(
+        None, description="Schema definition for the field",
     )
-    interface: Optional[InterfaceSettings] = Field(
-        None, description="UI settings for the field"
+    interface: InterfaceSettings | None = Field(
+        None, description="UI settings for the field",
     )
-    options: Optional[AdditionalOptions] = Field(
-        None, description="Additional options for the field"
+    options: AdditionalOptions | None= Field(
+        None, description="Additional options for the field",
     )
 
     class Config:
         extra = "forbid"
-        json_schema_extra = {
-          "collection_id": uuid.uuid4(),
-          "field": "username",
-          "type": "string",
-          "schema": {
+        json_schema_extra: ClassVar[dict] = {
+            # Use a fixed UUID instead of uuid4() for class-level constancy
+            "collection_id": uuid.UUID("12345678-1234-5678-9abc-123456789abc"),
+            "field": "username",
             "type": "string",
-            "required": True,
-            "default": "guest_user",
-            "enum": ["guest_user", "admin_user", "regular_user"],
-            "min_length": 5,
-            "max_length": 20,
-            "pattern": "^[a-zA-Z0-9_]+$"
-          },
-          "interface": {
-            "widget": "text",
-            "label": "Username",
-            "placeholder": "Enter your username",
-            "help_text": "Username must be 5-20 characters long and can include letters, numbers, and underscores.",
-            "readonly": False,
-            "hidden": False,
-            "order": 1,
-            "css_class": "username-input",
-            "width": "50%",
-            "icon": "user"
-          },
-          "options": {
-            "searchable": True,
-            "sortable": True,
-            "unique": True,
-            "index": True,
-            "default_sort": False,
-            "filterable": True,
-            "group": "Account Information",
-            "dependencies": ["email", "password"]
-          }
+            "schema": {
+                "type": "string",
+                "required": True,
+                "default": "guest_user",
+                "enum": ["guest_user", "admin_user", "regular_user"],
+                "min_length": 5,
+                "max_length": 20,
+                "pattern": "^[a-zA-Z0-9_]+$",
+            },
+            "interface": {
+                "widget": "text",
+                "label": "Username",
+                "placeholder": "Enter your username",
+                "help_text": (
+                    "Username must be 5-20 characters long and can include"
+                    " letters, numbers, and underscores."
+                ),
+                "readonly": False,
+                "hidden": False,
+                "order": 1,
+                "css_class": "username-input",
+                "width": "50%",
+                "icon": "user",
+            },
+            "options": {
+                "searchable": True,
+                "sortable": True,
+                "unique": True,
+                "index": True,
+                "default_sort": False,
+                "filterable": True,
+                "group": "Account Information",
+                "dependencies": ["email", "password"],
+            },
         }
 
 

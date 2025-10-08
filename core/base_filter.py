@@ -1,5 +1,3 @@
-from typing import Type
-
 from pydantic import BaseModel
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import operators
@@ -19,15 +17,8 @@ operator_map = {
 
 
 class BaseFilter(BaseModel):
-    """
-    A base class for creating Django-like filters with operators.
-    """
 
-    def apply_filters(self, query: Query, model: Type) -> Query:
-        """
-        Dynamically apply filters with operator support.
-        """
-
+    def apply_filters(self, query: Query, model: type) -> Query:
         for field, value in self.model_dump(exclude_none=True).items():
             parts = field.split("__")  # Split by operator suffix
             column_name = parts[0]

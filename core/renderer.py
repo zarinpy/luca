@@ -1,44 +1,51 @@
-import copy
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import ujson
 from fastapi import status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from starlette.background import BackgroundTask
+
+if TYPE_CHECKING:
+    from starlette.background import BackgroundTask
 
 __all__ = ["CustomResponse", "get_response_schema"]
 
+@dataclass
+class ResponseInfo:
+    details: dict | None = None
+    metadata: dict[str, Any] = None
+    message: str = ""
 
 class CustomResponse(JSONResponse):
     content: Any = None
 
-    def __init__(
+    def __init__(   #noqa: PLR0913
             self,
-            content: Any = None,
-            message: str = "",
-            metadata: Dict[str, Any] = {},
-            details: Any = None,
+            content: dict | list | None,
+            info: ResponseInfo,
+            headers: dict | None = None,
+            media_type: str | None = None,
+            background: BackgroundTask | None = None,
             status_code: int = status.HTTP_200_OK,
-            headers: Dict = None,
-            media_type: str = None,
-            background: BackgroundTask = None,
     ) -> None:
         self.content = content
-        self.metadata = metadata
-        self.message = message
-        self.details = details
-        super(CustomResponse, self).__init__(
-            content, status_code, headers, media_type, background
+        self.details = info.details
+        self.metadata = info.metadata
+        self.message = info.message
+        super().__init__(
+            content, status_code, headers, media_type, background,
         )
 
-    def clean(self):
+    def clean(self) -> dict[str, Any]:
         if not self.content:
             self.content = []
         if not self.details:
             self.details = {}
 
-        result = {
+        return {
             "info": {
                 "message": self.message,
                 "details": self.details,
@@ -46,9 +53,8 @@ class CustomResponse(JSONResponse):
             },
             "data": self.content,
         }
-        return result
 
-    def render(self, content: Any) -> bytes:
+    def render(self, content: list | dict) -> bytes:
         content = self.clean()
         return ujson.dumps(
             content,
@@ -62,23 +68,23 @@ class CustomResponse(JSONResponse):
 # Define the Info model
 class Info(BaseModel):
     message: str
-    details: Dict[str, Any] = {}
-    metadata: Dict[str, Any] = {}
+    details: dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
 
 
 # Define the generic Response model
 class APIResponse(BaseModel):
     info: Info
-    data: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
 
 
 # Utility function to create APIResponse with custom message
 def create_response(
         status_code: int,
-        message: Optional[str] = None,
-        data: Dict[str, Any] = None,
-        details: Dict[str, Any] = None,
-        metadata: Dict[str, Any] = None
+        message: str | None,
+        data: dict[str, Any],
+        details: dict[str, Any],
+        metadata: dict[str, Any],
 ) -> APIResponse:
     # Default messages based on status code
     status_messages = {
@@ -96,20 +102,18 @@ def create_response(
     )
 
     # Create the response
-    response = APIResponse(
+    return APIResponse(
         info=Info(
             message=final_message,
             details=details or {},
-            metadata=metadata or {}
+            metadata=metadata or {},
         ),
-        data=data or {}
+        data=data or {},
     )
-
-    return response
 
 
 # Define response schema for OpenAPI documentation
-def get_response_schema(status_code: int, message: str) -> Dict:
+def get_response_schema(status_code: int, message: str) -> dict:
     return {
         status_code: {
             "model": APIResponse,
@@ -120,11 +124,11 @@ def get_response_schema(status_code: int, message: str) -> Dict:
                         "info": {
                             "message": message,
                             "details": {},
-                            "metadata": {}
+                            "metadata": {},
                         },
-                        "data": {}
-                    }
-                }
-            }
-        }
+                        "data": {},
+                    },
+                },
+            },
+        },
     }

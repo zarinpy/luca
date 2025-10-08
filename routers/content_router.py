@@ -1,12 +1,11 @@
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Request, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from core import CustomResponse, get_response_schema
 from core.dependencies import DBSession
 from models.orm_models.core import Content
-from models.schema.content_schema import CreateContent, ContentSchema
-from core import get_response_schema, CustomResponse
+from models.schema.content_schema import ContentSchema, CreateContent
 
 # APIRouter with versioning and auth dependency
 contents_router = APIRouter(
@@ -27,10 +26,9 @@ contents_router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_content(
-    request: Request,
-    session: AsyncSession = Depends(DBSession),
-    data: CreateContent = Depends(),
-):
+    session: DBSession,
+    data: CreateContent,
+) -> None :
     """Create a new content item"""
     content = await Content.create(
         session=session,
@@ -42,11 +40,10 @@ async def create_content(
 
 @contents_router.get("/")
 async def list_contents(
-    request: Request,
-    session: AsyncSession = Depends(DBSession),
+    session: DBSession,
     page: int = 1,
     limit: int = 100,
-):
+) -> None :
     """List all content items with pagination"""
     query = select(Content)
     if limit:
@@ -66,15 +63,11 @@ async def list_contents(
     "/{content_id}",
     status_code=status.HTTP_200_OK,
 )
-async def get_content(
-    request: Request,
-    content_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def get_content(content_id: int, session: DBSession) -> None :
     """Get a single content item's info"""
     content = await Content.get(
         session,
-        keys={'id': content_id},
+        keys={"id": content_id},
         raise_exception=True,
     )
     schema = ContentSchema()
@@ -86,15 +79,14 @@ async def get_content(
     status_code=status.HTTP_200_OK,
 )
 async def update_content(
-    request: Request,
+    session: DBSession,
     content_id: int,
-    data: CreateContent = Depends(),
-    session: AsyncSession = Depends(DBSession),
-):
+    data: CreateContent,
+) -> None :
     """Update a content item"""
     content = await Content.get(
         session,
-        keys={'id': content_id},
+        keys={"id": content_id},
         raise_exception=True,
     )
     content = await content.update(session, data.model_dump())
@@ -109,18 +101,14 @@ async def update_content(
         **get_response_schema(
             200,
             "Content successfully deleted",
-        )
+        ),
     },
 )
-async def delete_content(
-    request: Request,
-    content_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def delete_content(content_id: int, session: DBSession) -> None :
     """Delete a content item"""
     content = await Content.get(
         session,
-        keys={'id': content_id},
+        keys={"id": content_id},
         raise_exception=True,
     )
     await content.delete(session)
@@ -131,15 +119,11 @@ async def delete_content(
     "/{content_id}/publish",
     status_code=status.HTTP_200_OK,
 )
-async def publish_content(
-    request: Request,
-    content_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def publish_content(content_id: int, session: DBSession) -> None :
     """Publish a content item"""
     content = await Content.get(
         session,
-        keys={'id': content_id},
+        keys={"id": content_id},
         raise_exception=True,
     )
     content = await content.publish(session)
@@ -152,11 +136,10 @@ async def publish_content(
     status_code=status.HTTP_200_OK,
 )
 async def list_drafts(
-    request: Request,
-    session: AsyncSession = Depends(DBSession),
+    session: DBSession,
     page: int = 1,
     limit: int = 100,
-):
+) -> None :
     """List all draft content items"""
     query = select(Content).filter_by(is_draft=True)
     if limit:
@@ -176,15 +159,11 @@ async def list_drafts(
     "/{content_id}/revisions/",
     status_code=status.HTTP_201_CREATED,
 )
-async def save_revision(
-    request: Request,
-    content_id: int,
-    session: AsyncSession = Depends(DBSession),
-):
+async def save_revision(content_id: int, session: DBSession) -> None :
     """Save a revision for a content item"""
     content = await Content.get(
         session,
-        keys={'id': content_id},
+        keys={"id": content_id},
         raise_exception=True,
     )
     revision = await content.save_revision(session)
@@ -192,17 +171,17 @@ async def save_revision(
     return CustomResponse(content=schema.dump(revision), status_code=201)
 
 
-@content_router.patch("/{content_id}/publish", status_code=status.HTTP_200_OK)
-async def publish_content(content_id: int, request: Request):
+@contents_router.patch("/{content_id}/publish", status_code=status.HTTP_200_OK)
+async def publish_content_logic(content_id: int, request: Request) -> None :
     pass
 
 
-@content_router.get("/drafts/", status_code=status.HTTP_200_OK)
-async def get_drafts(request: Request):
+@contents_router.get("/drafts/", status_code=status.HTTP_200_OK)
+async def get_drafts_logic(request: Request) -> None :
     pass
 
 
-@content_router.post("/{content_id}/revisions/",
+@contents_router.post("/{content_id}/revisions/",
                      status_code=status.HTTP_201_CREATED)
-async def save_revision(content_id: int, request: Request):
+async def save_revision_logic(content_id: int, request: Request) -> None :
     pass

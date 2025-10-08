@@ -1,13 +1,15 @@
-from typing import Any, Dict, Optional
+from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Any
+
 from marshmallow import Schema, fields
+from pydantic import BaseModel, Field
+
 from models.orm_models.core import Collection
 
 
 class CollectionSchema(Schema):
-    """Output schema for a collection.
-    """
+    """Output schema for a collection."""
 
     id = fields.UUID()
     collection = fields.Str()
@@ -19,9 +21,7 @@ class CollectionSchema(Schema):
 
 
 class CreateCollection(BaseModel):
-    """
-    Pydantic model for the mitre_collections table, representing metadata about each collection.
-    """
+
     collection: str = Field(
         ...,
         alias="name",
@@ -36,15 +36,15 @@ class CreateCollection(BaseModel):
         default=False,
         description="True if only one record allowed",
     )
-    icon: Optional[Dict[str, Any]] = Field(
+    icon: dict[str, Any] | None = Field(
         default={},
         description="UI icon metadata",
     )
-    note: Optional[Dict[str, Any]] = Field(
+    note: dict[str, Any] | None = Field(
         default={},
         description="Arbitrary notes/metadata",
     )
-    translations: Optional[Dict[str, Any]] = Field(
+    translations: dict[str, Any] | None = Field(
         default={},
         description="Multilanguage labels",
     )
