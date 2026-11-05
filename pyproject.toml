@@ -1,31 +1,74 @@
-[tool.poetry]
-package-mode = false
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "luca"
-version = "0.0.1"
-description = "luca is an Open source Headless CMS"
-authors = ["Omid Zarinmahd <zarinpy@gmail>"]  # Replace with your info
-license = "MIT"  # Or your preferred license
+version = "0.1.0"
+description = "Server-rendered application using FastAPI and Mako"
 readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.15",
+    "fastapi>=0.115",
+    "mako>=1.3",
+    "psycopg[binary]>=3.2",
+    "pydantic-settings>=2.9",
+    "python-dotenv>=1.1",
+    "sqlalchemy>=2.0",
+    "typer>=0.15",
+    "uvicorn[standard]>=0.34",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11.9"
-fastapi = {extras = ["all"], version = "^0.115.12"}
-uvicorn = {extras = ["standard"], version = "^0.34.1"}
-sqlalchemy = "^2.0.28"
-asyncpg = "0.30.0"  # PostgreSQL (async)
-alembic = "1.15.2"
-pydantic = {extras = ["email"], version = "^2.11.4"}
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-httpx = "^0.28.1"
-fastapi-pagination = "^0.13.1"
-marshmallow = "^4.0.0"
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28",
+    "pytest>=8.3",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "8.3.5"
-coverage = {extras = ["toml"], version = "7.8.0"}
-flake8 = "^7.0.0"
-mypy = "^1.11.3"
-isort = "^5.13.2"
-pre-commit = "4.2.0"
-black = "^25.1.0"
+[project.scripts]
+luca = "luca.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["luca*"]
+
+[tool.setuptools.package-data]
+luca = ["templates/*.mako"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.isort]
+profile = "black"
+line_length = 79
+known_first_party = ["luca"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-ignore = [
+    "E902",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D415",
+    "D400",
+    "D203",
+    "D212",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"luca/basedata.py" = ["T201"]
+"luca/**/basedata.py" = ["T201"]
+"luca/mockup.py" = ["T201"]
+"luca/**/mockup.py" = ["T201"]

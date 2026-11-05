@@ -1,0 +1,10 @@
+Migrations are Alembic revisions.
+
+Create one from model changes with:
+
+    luca db revision -m "describe the change"
+
+The command compares `Base.metadata` with the database and writes a file
+under `migrations/versions/` only when it detects a difference.
+Register every model in `luca/models.py` before running it.
+Apply revisions with `luca db upgrade`.
