@@ -1,0 +1,24 @@
+# Indonesian (Indonesia) translations for luca.
+# Copyright (C) 2026 luca
+# This file is distributed under the same license as the luca project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: luca 0.1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-11-06 00:07+0330\n"
+"PO-Revision-Date: 2026-11-05 23:53+0330\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: id_ID\n"
+"Language-Team: id_ID <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: templates/index.mako:8
+msgid "Server-rendered with FastAPI and Mako."
+msgstr ""
+

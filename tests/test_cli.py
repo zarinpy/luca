@@ -119,3 +119,11 @@ def test_revision_empty_skips_autogenerate(
 
     assert result.exit_code == 0
     assert seen["autogenerate"] is False
+
+
+def test_i18n_help_lists_translate_and_compile() -> None:
+    result = runner.invoke(app, ["i18n", "--help"])
+
+    assert result.exit_code == 0
+    assert "translate" in result.output
+    assert "compile" in result.output

@@ -1,1 +1,0 @@
-"""Site singleton settings."""

@@ -15,7 +15,9 @@ environment and `.env`.
 | `luca/database.py` | Sync engine, session, and create/drop database |
 | `luca/basedata.py` | Required seed data, delegated to feature packages |
 | `luca/mockup.py` | Sample seed data, delegated to feature packages |
+| `luca/locale/` | Locale rows seeded from the supported locale codes |
 | `luca/models.py` | Imports every model so Alembic can see it |
+| `luca/i18n/` | Babel catalogs and the translate and compile commands |
 | `luca/templates/` | Mako templates |
 | `migrations/` | Alembic environment and revision files |
 | `alembic.ini` | Alembic script location and logging |
@@ -31,9 +33,9 @@ luca db basedata insert
 luca db mockup insert
 ```
 
-Authentication base data inserts the built-in members. Site base data
-inserts the settings row when it is missing. Authentication mockup data
-inserts the sample members through the same ensure helper.
+Locale base data inserts one row for each supported locale code. Authentication
+base data inserts the built-in members. Authentication mockup data inserts
+the sample members through the same ensure helper.
 
 ## Migrations
 
@@ -44,3 +46,25 @@ invisible until `luca/models.py` imports it.
 
 `luca db upgrade` applies revisions. `luca db rebuild` is the destructive
 local reset: drop, create, upgrade, base data, mockup.
+
+## Translations
+
+Babel extracts messages from Python modules and Mako templates. Visible
+template text uses `gettext`. Catalogs live in `luca/i18n/<locale>/LC_MESSAGES`
+for `en-US`, `zh-CN`, `es-ES`, `fr-FR`, `de-DE`, `ja-JP`, `pt-BR`, `ru-RU`,
+`ar-SA`, `hi-IN`, `it-IT`, `ko-KR`, `nl-NL`, `tr-TR`, `pl-PL`, `id-ID`,
+`th-TH`, `vi-VN`, `fa-IR`, and `sv-SE`.
+
+```text
+luca i18n translate
+luca i18n compile
+```
+
+`luca i18n translate` writes `messages.pot` and creates or updates one PO
+catalog per locale. `luca i18n compile` writes the MO files the pages load.
+The default locale is `en-US`.
+
+Member text that changes by locale is stored on `MemberLocale`, not as
+columns on `Member`. Each `MemberLocale` row points at one `Member` and one
+`Locale`. `name` and `family` are the translated fields. An empty value falls
+back to the `en-US` row.

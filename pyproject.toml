@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.15",
+    "babel>=2.17",
     "fastapi>=0.115",
     "mako>=1.3",
     "psycopg[binary]>=3.2",
@@ -33,7 +34,13 @@ luca = "luca.cli:main"
 include = ["luca*"]
 
 [tool.setuptools.package-data]
-luca = ["templates/*.mako"]
+luca = [
+    "templates/*.mako",
+    "i18n/babel.cfg",
+    "i18n/messages.pot",
+    "i18n/*/LC_MESSAGES/*.po",
+    "i18n/*/LC_MESSAGES/*.mo",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

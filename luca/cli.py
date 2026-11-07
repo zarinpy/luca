@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -13,14 +14,21 @@ from luca.database import (
     database_name,
     drop_database,
 )
+from luca.i18n import (
+    CatalogError,
+    compile_catalogs,
+    translate,
+)
 
 app = typer.Typer(no_args_is_help=True)
 db_app = typer.Typer(no_args_is_help=True)
 basedata_app = typer.Typer(no_args_is_help=True)
 mockup_app = typer.Typer(no_args_is_help=True)
+i18n_app = typer.Typer(no_args_is_help=True)
 app.add_typer(db_app, name="db")
 db_app.add_typer(basedata_app, name="basedata")
 db_app.add_typer(mockup_app, name="mockup")
+app.add_typer(i18n_app, name="i18n")
 
 
 def alembic_config() -> Config:
@@ -143,6 +151,41 @@ def rebuild() -> None:
     command.upgrade(alembic_config(), "head")
     _insert_basedata()
     _insert_mockup()
+
+
+def _display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+@i18n_app.command("translate")
+def i18n_translate() -> None:
+    """Extract messages and update catalogs for every locale."""
+    try:
+        result = translate()
+    except CatalogError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"extracted {_display_path(result.template)}")
+    for code in result.initialized:
+        typer.echo(f"initialized {code}")
+    for code in result.updated:
+        typer.echo(f"updated {code}")
+
+
+@i18n_app.command("compile")
+def i18n_compile() -> None:
+    """Compile message catalogs to MO files."""
+    try:
+        compiled = compile_catalogs()
+    except CatalogError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    for code in compiled:
+        typer.echo(f"compiled {code}")
 
 
 @app.command()

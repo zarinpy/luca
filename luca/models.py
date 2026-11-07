@@ -1,4 +1,4 @@
-from luca.auth.models import Member
-from luca.site.models import SiteSettings
+from luca.auth.models import Member, MemberLocale
+from luca.locale.models import Locale
 
-__all__ = ["Member", "SiteSettings"]
+__all__ = ["Locale", "Member", "MemberLocale"]

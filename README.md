@@ -30,8 +30,13 @@ luca db revision -m "init"
 luca db upgrade
 luca db basedata insert
 luca db mockup insert
+luca i18n translate
+luca i18n compile
 luca serve
 ```
+
+`luca i18n translate` extracts messages and updates catalogs for the
+supported locales. `luca i18n compile` compiles those catalogs.
 
 `luca db rebuild` drops the configured database, creates it, applies
 migrations, and inserts base data and mockup data.
